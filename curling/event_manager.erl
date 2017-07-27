@@ -1,7 +1,7 @@
 -module(event_manager).
 
 -export([start/2, stop/1]).
--export([add_handler/3, delete_handler/2, get_data/2, send_event/1]).
+-export([add_handler/3, delete_handler/2, get_data/2, send_event/3]).
 -export([init/1]).
 
 start(Name, HandlerList) ->
@@ -27,39 +27,59 @@ terminate([{Handler, Data}|Rest]) ->
 [{Handler, Handler:terminate(Data)}|terminate(Rest)].
 
 add_handler(Name, Handler, InitData) ->
-call(Name, {add_handler, Handler, InitData}).
+call(Name, {add_handler, Handler, InitData},[]).
 
 delete_handler(Name, Handler) ->
-call(Name, {delete_handler, Handler}).
+call(Name, {delete_handler, Handler},[]).
 
 get_data(Name, Handler) ->
-call(Name, {get_data, Handler}).
+call(Name, {get_data, Handler},[]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-send_event(Name) ->
-call(Name,{send_event}).
+send_event(Name,[Team1,Team2],match) ->
+call(Name,{match},[Team1,Team2]);
+send_event(Name,[Team,Points],points) -> 
+call(Name,{points},[Team,Points]).
 
-call(Name,{send_event}) ->
-Name ! {request, self()},
-receive {reply, Reply} -> Reply end.
+call(Name,{match},[Team1,Team2]) ->
+Name ! {match, self(),[Team1,Team2]},
+receive {reply, Reply} -> Reply end ;
+call(Name,{points},[Team,Points])->
+Name ! {points, self(),[Team,Points]},
+receive {reply, Reply} -> Reply end .
+
+
+
 
 loop(State) ->
 receive
-{request, From} ->
-{Reply, NewState} = handle_msg(State),
+{match, From,[Team1,Team2]} ->
+{Reply, NewState} = handle_msg(State,match,[Team1,Team2]),
+reply(From, Reply),
+loop(NewState);
+{points, From,[Team,Points]} ->
+{Reply, NewState} = handle_msg(State,points,[Team,Points]),
 reply(From, Reply),
 loop(NewState);
 {stop, From} ->
 reply(From, terminate(State))
 end.
 
-handle_msg(LoopData) ->{ok, event(LoopData)}.
+handle_msg(LoopData,match,[Team1,Team2]) ->{ok, event(LoopData,match,[Team1,Team2])};
+handle_msg(LoopData,points,[Team,Points]) ->{ok, event(LoopData,points,[Team,Points])}.
 
-event([]) -> [];
-event([Handler|Rest]) ->
-[ Handler:handle_event({set_teams, "A", "B"})|event(Rest)].
+
+
+
+event([],_,_) -> [];
+event([Handler|Rest],match,[Team1,Team2]) ->
+[ Handler:handle_event({set_teams, Team1, Team2})|event(Rest,match,[Team1,Team2])];
+event([Handler|Rest],points,[Team,Points]) ->
+[ Handler:handle_event({add_points, Team, Points})].
+% Handler:handle_event({add_points, Team, Points})
+% [ 1|event(Rest,points,[Team,Points])].
 
 %Handler:handle_event({set_teams, "team A", "team B"}, done)%
 
