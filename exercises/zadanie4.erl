@@ -14,6 +14,6 @@ loop() ->
 		
 
 		
-send([H|T],M) -> 
-	H ! {M, T} ,
+send([H|T],Message) -> 
+	H ! {Message, T} ,
 	{ok} .
