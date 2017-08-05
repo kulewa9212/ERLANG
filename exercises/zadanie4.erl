@@ -14,6 +14,11 @@ loop() ->
 		
 
 		
+<<<<<<< HEAD
 send([H|T],M) -> 
 	H ! {M, T} ,
+=======
+send([H|T],Message) -> 
+	H ! {Message, T} ,
+>>>>>>> 7fb383f... Exercises -> 3 and 4 .
 	{ok} .
